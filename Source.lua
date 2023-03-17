@@ -673,9 +673,10 @@ end;
 function ESPModes.BoundingBox:Render(NoDraw)
     local Meta = getmetatable(self) or self;
     local Part, Type = Meta.__Part, Meta.__Type;
-
+    local Hrp = Part;
     if (Type == "Character") then
         Part = Part:FindFirstChild("HumanoidRootPart");
+        Hrp = Part;
         if (not Part) then return; end;
         Part = {
             CFrame = Part.CFrame - Vector3.new(0, 0.5, 0);
@@ -699,7 +700,7 @@ function ESPModes.BoundingBox:Render(NoDraw)
     Max(Unpack(YPoints));
 
     Meta.MinX, Meta.MaxX, Meta.MinY, Meta.MaxY, Meta.OnScreen = MinX, MaxX, MinY, MaxY, OnScreen;
-    local RenderState = GetRenderState(Part.Position, Meta.RenderState);
+    local RenderState = GetRenderState(Part.Position, Meta.RenderState, Hrp);
     Meta.LastState = RenderState;
     local Color = (Meta[RenderState.."Color"] or Meta[RenderState.."OutlineColor"]);
     Meta.CurrentColor = Color;
@@ -809,10 +810,12 @@ function ESPModes.Orthogonal:Render()
 
     if (Type == "Part") then
         local Replica = Meta.__Parts;
+        if (not Replica) then return; end;
         Replica.Size, Replica.CFrame = Part.Size, Part.CFrame;
         Replica.Color, Replica.Transparency = Meta.CurrentColor, 1 - Meta.Opacity;
         return;
     end;
+    if (not Meta.__Parts) then return; end;
     for Source, Replica in pairs(Meta.__Parts) do
         Replica.Size, Replica.CFrame = Source.Size, Source.CFrame;
         Replica.Color, Replica.Transparency = Meta.CurrentColor, 1 - Meta.Opacity;
@@ -824,6 +827,7 @@ function ESPModes.Highlight:Render()
     ESPModes.BoundingBox.Render(Meta, not Meta.RenderBoundingBox);
     if (not Meta.OnScreen) then return; end;
     local Highlight = Meta.__Highlight;
+    if (not Highlight) then return; end;
     Highlight.OutlineTransparency = 1 - Meta.OutlineOpacity;
     Highlight.FillTransparency = 1 - Meta.FillOpacity;
     local State = Meta.LastState;
