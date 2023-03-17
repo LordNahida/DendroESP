@@ -676,7 +676,7 @@ function ESPModes.BoundingBox:Render(NoDraw)
     local Hrp = Part;
     if (Type == "Character") then
         Part = Part:FindFirstChild("HumanoidRootPart");
-        Hrp = Part;
+        Hrp = Part.Parent;
         if (not Part) then return; end;
         Part = {
             CFrame = Part.CFrame - Vector3.new(0, 0.5, 0);
