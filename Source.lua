@@ -652,19 +652,19 @@ local function ProjectLine(Line, Source)
     return Line;
 end;
 
-local function GetRenderState(Point, RenderState)
+local function GetRenderState(Point, RenderState, Part)
     if (not RenderState) then return "Positive"; end;
     local BulletSource = GetBulletSource();
     local Delta = (Point - BulletSource);
     if (Delta.Magnitude >= 5e3) then return "Negative"; end;
     local RaycastResult = Raycast(Workspace, BulletSource, Delta, DendroESP.RaycastParams);
-    if (not RaycastResult) then return "Positive"; end;
+    if (not RaycastResult or RaycastResult.Instance == Part or RaycastResult.Instance:IsDescendantOf(Part)) then return "Positive"; end;
     local WallPenThickness = DendroESP.WallPenThickness;
     if (not WallPenThickness or WallPenThickness == 0) then return "Negative"; end;
     local NewSource = RaycastResult.Position + Delta.Unit * WallPenThickness;
     if (not Raycast(Workspace, NewSource, Delta.Unit * -WallPenThickness)) then return "Negative"; end;
     RaycastResult = Raycast(Workspace, NewSource, (Point - NewSource), DendroESP.RaycastParams);
-    if (not RaycastResult) then return "Neutral"; end;
+    if (not RaycastResult or RaycastResult.Instance == Part or RaycastResult.Instance:IsDescendantOf(Part)) then return "Neutral"; end;
     return "Negative";
 end;
 --#endregion
