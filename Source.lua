@@ -241,7 +241,7 @@ end;
 
 function DendroMeta:AddCharacter(Character, ESPMode)
     assert(Character:IsA("Model"), "Expected Character Model for Arg #1.");
-    assert(Character:FindFirstChild("HumanoidRootPart"), "Unable to find HumanoidRootPart in this character.");
+    assert(Character:FindFirstChild("HumanoidRootPart") or Character.PrimaryPart, "Unable to find a RootPart in this character.");
     assert(ESPModes[ESPMode], "Invalid ESPMode.");
 
     local Proxy = CreateRenderingProxy(ESPMode, Character, "Character");
@@ -313,7 +313,7 @@ local function GetEdgesNoOverlap(Part)
 end;
 
 local function GetCharacterVertices(Part)
-    if (Part:IsA("Model")) then Part = Part.HumanoidRootPart; end;
+    if (Part:IsA("Model")) then Part = Part:FindFirstChild("HumanoidRootPart") or Part.PrimaryPart; end;
     local CF = Part.CFrame;
     return  {
         -- Head
@@ -679,7 +679,7 @@ function ESPModes.BoundingBox:Render(NoDraw)
     local Part, Type = Meta.__Part, Meta.__Type;
     local Hrp = Part;
     if (Type == "Character") then
-        Part = Part:FindFirstChild("HumanoidRootPart");
+        Part = Part:FindFirstChild("HumanoidRootPart") or Part.PrimaryPart;
         if (not Part) then return; end;
         Part = {
             CFrame = Part.CFrame - Vector3.new(0, 0.5, 0);
