@@ -1,6 +1,6 @@
 --Dendro ESP
 --Nahida#5000
---Ver 1.0
+--Ver 1.1
 
 --#region Setup
 --//Services\\--
@@ -89,6 +89,9 @@ local NewCF = CFrame.new;
 
 local EmptyCF = NewCF();
 local Viewport, SetupViewport;
+local CanShoot = Instance.new("BindableEvent");
+CanShoot.Name = "CanShoot";
+DendroMeta.CanShoot = CanShoot;
 --//DataModel Stack Declaration\\--
 local Camera, Raycast = Workspace.CurrentCamera, Workspace.Raycast;
 local ToScreenPoint = Camera.WorldToViewportPoint;
@@ -670,6 +673,7 @@ end;
 --#endregion
 
 --#region Rendering Functions
+local ShootIndex = 0;
 function ESPModes.BoundingBox:Render(NoDraw)
     local Meta = getmetatable(self) or self;
     local Part, Type = Meta.__Part, Meta.__Type;
@@ -700,6 +704,10 @@ function ESPModes.BoundingBox:Render(NoDraw)
 
     Meta.MinX, Meta.MaxX, Meta.MinY, Meta.MaxY, Meta.OnScreen = MinX, MaxX, MinY, MaxY, OnScreen;
     local RenderState = GetRenderState(Part.Position, Meta.RenderState, Hrp);
+    if (RenderState == "Positive") then
+        CanShoot:Fire(Meta.__Part, ShootIndex);
+        ShootIndex = ShootIndex + 1;
+    end;
     Meta.LastState = RenderState;
     local Color = (Meta[RenderState.."Color"] or Meta[RenderState.."OutlineColor"]);
     Meta.CurrentColor = Color;
@@ -840,6 +848,7 @@ if (_G.DendroESPConnection) then _G.DendroESPConnection:Disconnect(); end;
 if (CoreGui:FindFirstChild("DendroESP")) then CoreGui.DendroESP:Destroy(); end;
 _G.DendroESPConnection = RunService.RenderStepped:Connect(function()
     Camera = Workspace.CurrentCamera;
+    ShootIndex = 0;
     if (Viewport) then Viewport.CurrentCamera = Camera; end;
     for _ = 1, #DendroProxies do
         local Proxy = DendroProxies[_];
