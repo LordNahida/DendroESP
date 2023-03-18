@@ -1,6 +1,6 @@
 --Dendro ESP
 --Nahida#5000
---Ver 1.1
+--Ver 1.0
 
 --#region Setup
 --//Services\\--
@@ -91,7 +91,7 @@ local EmptyCF = NewCF();
 local Viewport, SetupViewport;
 local CanShoot = Instance.new("BindableEvent");
 CanShoot.Name = "CanShoot";
-DendroMeta.CanShoot = CanShoot;
+DendroMeta.CanShoot = CanShoot.Event;
 --//DataModel Stack Declaration\\--
 local Camera, Raycast = Workspace.CurrentCamera, Workspace.Raycast;
 local ToScreenPoint = Camera.WorldToViewportPoint;
@@ -705,7 +705,7 @@ function ESPModes.BoundingBox:Render(NoDraw)
     Meta.MinX, Meta.MaxX, Meta.MinY, Meta.MaxY, Meta.OnScreen = MinX, MaxX, MinY, MaxY, OnScreen;
     local RenderState = GetRenderState(Part.Position, Meta.RenderState, Hrp);
     if (RenderState == "Positive") then
-        CanShoot:Fire(Meta.__Part, ShootIndex);
+        CanShoot:Fire(Meta.__Part, self, ShootIndex);
         ShootIndex = ShootIndex + 1;
     end;
     Meta.LastState = RenderState;
