@@ -65,6 +65,7 @@ local DendroESP = {
 local function GetMousePos()
     return NewV2(Mouse.X, Mouse.Y) + GuiService:GetGuiInset();
 end;
+DendroESP.GetMousePos = GetMousePos;
 
 local function GetModelPart(Model)
     return Model.PrimaryPart or Model:FindFirstChildWhichIsA("BasePart");
