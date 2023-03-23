@@ -1071,3 +1071,5 @@ _G.DendroESPConnection = RunService.RenderStepped:Connect(function()
     end;
 end);
 --#endregion
+
+return DendroESP;
