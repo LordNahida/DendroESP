@@ -545,7 +545,7 @@ local function PreparePart(self)
     local RenderState = WallPenRaycast(BulletSource, Part.Position, Part);
     self.RenderState = RenderState;
     self.CurrentColor = self[RenderState.."Color"];
-    if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = self; end;
+    if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = (OnScreen and self) or nil; end;
     return true;
 end;
 
@@ -588,7 +588,7 @@ local function PrepareModel(self)
     local RenderState = WallPenRaycast(BulletSource, ModelCF.Position, Model);
     self.RenderState = RenderState;
     self.CurrentColor = self[RenderState.."Color"];
-    if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = self; end;
+    if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = (OnScreen and self) or nil; end;
     return true;
 end;
 
@@ -632,7 +632,7 @@ local function PrepareCharacter(self)
     local RenderState = WallPenRaycast(BulletSource, CharacterCF.Position, Character);
     self.State = RenderState;
     self.CurrentColor = self[RenderState.."Color"];
-    if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = self; end;
+    if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = (OnScreen and self) or nil; end;
     return true;
 end;
 --#endregion
