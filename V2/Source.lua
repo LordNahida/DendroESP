@@ -29,23 +29,11 @@ local Viewport, SetupViewport, BulletSource;
 local Camera, Raycast = Workspace.CurrentCamera, Workspace.Raycast;
 local ToScreenPoint = Camera.WorldToViewportPoint;
 --//Events\\--
-local OnRender = Instance.new("BindableEvent");
-local PositiveRender = Instance.new("BindableEvent");
-local NeutralRender = Instance.new("BindableEvent");
-local NaturalRender = Instance.new("BindableEvent");
-local RenderEvents = {
-    PositiveRender = PositiveRender;
-    Positive = 0;
-    NeutralRender = NeutralRender;
-    Neutral = 0;
-    NaturalRender = NaturalRender;
-    Natural = 0;
-};
+local PostRender = Instance.new("BindableEvent");
+local NonNegativeTables;
 --//Main\\--
 local DendroESP = {
-    PositiveRender = PositiveRender.Event;
-    NeutralRender = NeutralRender.Event;
-    NaturalRender = NaturalRender.Event;
+    PostRender = PostRender.Event;
 
     BulletOffset = NewCF(0, 0, -1);
     WallPenThickness = 0;
@@ -392,7 +380,7 @@ local function DrawRadialHitbox(self)
     end;
     local Color, Transparency = self.CurrentColor, self.Opacity;
     local Center = self.Center2D;
-    local MPos = GetMousePos();
+    local MPos = DendroESP.MousePos;
     local Radial = CreateDrawing("Circle");
     Radial.Thickness = 1;
     Radial.Position = Center;
@@ -557,11 +545,7 @@ local function PreparePart(self)
     local RenderState = WallPenRaycast(BulletSource, Part.Position, Part);
     self.RenderState = RenderState;
     self.CurrentColor = self[RenderState.."Color"];
-    if (RenderState == "Negative") then return true; end;
-    RenderEvents[RenderState] += 1;
-    RenderEvents[RenderState.."Render"]:Fire(self, RenderEvents[RenderState]);
-    RenderEvents.Natural += 1;
-    RenderEvents.NaturalRender:Fire(self, RenderEvents.Natural);
+    if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = self; end;
     return true;
 end;
 
@@ -604,11 +588,7 @@ local function PrepareModel(self)
     local RenderState = WallPenRaycast(BulletSource, ModelCF.Position, Model);
     self.RenderState = RenderState;
     self.CurrentColor = self[RenderState.."Color"];
-    if (RenderState == "Negative") then return true; end;
-    RenderEvents[RenderState] += 1;
-    RenderEvents[RenderState.."Render"]:Fire(self, RenderEvents[RenderState]);
-    RenderEvents.Natural += 1;
-    RenderEvents.NaturalRender:Fire(self, RenderEvents.Natural);
+    if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = self; end;
     return true;
 end;
 
@@ -652,11 +632,7 @@ local function PrepareCharacter(self)
     local RenderState = WallPenRaycast(BulletSource, CharacterCF.Position, Character);
     self.State = RenderState;
     self.CurrentColor = self[RenderState.."Color"];
-    if (RenderState == "Negative") then return true; end;
-    RenderEvents[RenderState] += 1;
-    RenderEvents[RenderState.."Render"]:Fire(self, RenderEvents[RenderState]);
-    RenderEvents.Natural += 1;
-    RenderEvents.NaturalRender:Fire(self, RenderEvents.Natural);
+    if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = self; end;
     return true;
 end;
 --#endregion
@@ -671,6 +647,7 @@ local ESPs = {
     Shadow = {};
 };
 local RenderingTables = {};
+DendroESP.RenderingTables = RenderingTables;
 local function Render(self)
     if (not self.Enabled) then return; end;
     if (not self.Instance or not self.Instance.Parent) then self:Destroy(); end;
@@ -1057,13 +1034,15 @@ if (CoreGui:FindFirstChild("DendroESP")) then CoreGui.DendroESP:Destroy(); end;
 SetupViewport();
 
 _G.DendroESPConnection = RunService.RenderStepped:Connect(function()
+    NonNegativeTables = {};
     Camera = Workspace.CurrentCamera;
     BulletSource = GetBulletSource();
-    RenderEvents.Positive, RenderEvents.Neutral, RenderEvents.Natural = 0, 0, 0;
+    DendroESP.MousePos = GetMousePos();
     if (Viewport) then Viewport.CurrentCamera = Camera; end;
     for _, RenderingTable in pairs(RenderingTables) do
         RenderingTable:Render();
     end;
+    PostRender:Fire(NonNegativeTables);
     for _, Drawings in pairs(Drawings) do
         for Idx = Drawings.Count + 1, #Drawings do
             Drawings[Idx].Visible = false;
