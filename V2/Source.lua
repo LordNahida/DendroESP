@@ -68,6 +68,10 @@ function DendroESP:GetDPI(ForceUpdate)
     return DPI;
 end;
 
+function DendroESP:GetMouseSensitivity()
+    return UserSettings().GameSettings.MouseSensitivity;
+end;
+
 function DendroESP:ScheduleKeypress(Key, Delay)
     task.wait(Delay);
     keypress(Key);
@@ -1107,16 +1111,16 @@ _G.DendroAimbotConnection = RunService.RenderStepped:Connect(function()
     local AimTarget = DendroESP.AimTarget;
     DendroESP.MousePos = MousePos;
     if (not AimTarget) then return; end;
-    local AimFactor = DendroESP.AimFactor;
     local Delta = AimTarget - MousePos;
     local Distance = Delta.Magnitude;
+    local Sensitivity = DendroESP:GetMouseSensitivity();
     Delta = Delta.Unit;
     if (Distance <= 10) then
-        Delta = Delta * AimFactor * 0.5 * Distance;
+        Delta = Delta * Sensitivity * 0.5 * Distance;
     elseif (Distance <= 2) then
         return;
     else
-        Delta = Delta * Distance * AimFactor;
+        Delta = Delta * Distance * Sensitivity;
     end;
     mousemoverel(Delta.X, Delta.Y);
 end);
