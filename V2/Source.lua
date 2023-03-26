@@ -1113,14 +1113,14 @@ _G.DendroAimbotConnection = RunService.RenderStepped:Connect(function()
     if (not AimTarget) then return; end;
     local Delta = AimTarget - MousePos;
     local Distance = Delta.Magnitude;
-    local Sensitivity = DendroESP:GetMouseSensitivity();
+    local Sensitivity = DendroESP:GetMouseSensitivity() * 4;
     Delta = Delta.Unit;
     if (Distance <= 10) then
-        Delta = Delta * Sensitivity * 0.5 * Distance;
+        Delta = Delta / Sensitivity * 0.5 * Distance;
     elseif (Distance <= 2) then
         return;
     else
-        Delta = Delta * Distance * Sensitivity;
+        Delta = Delta * Distance / Sensitivity;
     end;
     mousemoverel(Delta.X, Delta.Y);
 end);
