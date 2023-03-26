@@ -24,7 +24,7 @@ local NewV2 = Vector2.new;
 local NewCF = CFrame.new;
 
 local EmptyCF = NewCF();
-local Viewport, SetupViewport, BulletSource;
+local Viewport, MouseUnlocker, SetupViewport, BulletSource;
 --//DataModel Stack Declaration\\--
 local Camera, Raycast = Workspace.CurrentCamera, Workspace.Raycast;
 local ToScreenPoint = Camera.WorldToViewportPoint;
@@ -33,6 +33,7 @@ local PostRender = Instance.new("BindableEvent");
 local NonNegativeTables;
 --//Main\\--
 local DendroESP = {
+    AimFactor = 0.9;
     PostRender = PostRender.Event;
 
     BulletOffset = NewCF(0, 0, -1);
@@ -50,10 +51,46 @@ local DendroESP = {
 --#endregion
 
 --#region Functions
-local function GetMousePos()
-    return NewV2(Mouse.X, Mouse.Y) + GuiService:GetGuiInset();
+function DendroESP:GetDPI(ForceUpdate)
+    SetupViewport();
+    if (self.DPI and not ForceUpdate) then return self.DPI; end;
+    MouseUnlocker.Visible = true;
+    local StartPosition = self:GetMousePos();
+    mousemoveabs(100, 100);
+    mousemoveabs(100, 099);
+    Mouse.Move:Wait();
+    local EndPosition = self:GetMousePos();
+    local DPI = math.round(1e4 / EndPosition.X) / 100;
+    StartPosition =  StartPosition * DPI;
+    mousemoveabs(StartPosition.X, StartPosition.Y);
+    self.DPI = DPI;
+    MouseUnlocker.Visible = false;
+    return DPI;
 end;
-DendroESP.GetMousePos = GetMousePos;
+
+function DendroESP:ScheduleKeypress(Key, Delay)
+    task.wait(Delay);
+    keypress(Key);
+end;
+
+function DendroESP:AimAt(Pos)
+    self.AimTarget = Pos;
+end;
+
+function DendroESP:MoveMouse(X, Y)
+    local DPI = self:GetDPI();
+    mousemoverel(X * DPI, Y * DPI);
+end;
+
+function DendroESP:MouseMoveTo(X, Y)
+    local DPI = self:GetDPI();
+    mousemoveabs(X * DPI, Y * DPI);
+end;
+
+function DendroESP:GetMousePos()
+    return NewV2(Mouse.X, Mouse.Y) + GuiService:GetGuiInset();    
+end;
+local GetMousePos = DendroESP.GetMousePos;
 
 local function GetModelPart(Model)
     return Model.PrimaryPart or Model:FindFirstChildWhichIsA("BasePart");
@@ -379,7 +416,7 @@ local function DrawRadialHitbox(self)
         RadialHitbox = (self.Max2DPoint - self.Min2DPoint).Magnitude / 2;
     end;
     local Color, Transparency = self.CurrentColor, self.Opacity;
-    local Center = self.Center2D;
+    local Center = (self.RadiusOnCrosshair and self.CrosshairCenter2D) or self.Center2D;
     local MPos = DendroESP.MousePos;
     local Radial = CreateDrawing("Circle");
     Radial.Thickness = 1;
@@ -493,11 +530,17 @@ local WallPenRaycast;
 WallPenRaycast = function(P0, P1, Target, PassCount)
     PassCount = PassCount or 0;
     local Delta = (P1 - P0);
-    if (Delta.Magnitude > 5000) then return "Negative"; end;
+    if (Delta.Magnitude > 5e3) then return "Negative"; end;--Target is too far.
     local RaycastParams = DendroESP.RaycastParams;
     local Cast = Raycast(Workspace, P0, Delta, RaycastParams);
+    --If it hit nothing, and it's the first pass, return "Positive".
+    --If it's not the first pass, return "Neutral".
     if (not Cast) then return (PassCount == 0 and "Positive") or "Neutral"; end;
-    if (Cast.Instance == Target or Cast.Instance:IsDescendantOf(Target)) then return (PassCount == 0 and "Positive") or "Neutral"; end;
+    if (Cast.Instance == Target or Cast.Instance:IsDescendantOf(Target)) then
+        return (PassCount == 0 and "Positive") or "Neutral";
+        --If the hit instance is part of the character, then return "Positive" if it's the first pass.
+        --If it's not the first pass, return "Neutral".
+    end;
     local WallPenThickness = DendroESP.WallPenThickness;
     if (WallPenThickness == 0) then return "Negative"; end;
     Delta = Delta.Unit;
@@ -719,6 +762,7 @@ local function CreateRenderingTable(Instance, Type)
 
         RadialHitbox = 0;
         MouseInRadius = false;
+        RadiusOnCrosshair = false;
 
         Type = Type;
         [Type] = Instance;
@@ -887,6 +931,15 @@ SetupViewport = function()
     Viewport.Position = UDim2.new(0.5, 0, 0.5, 0);
     Viewport.AnchorPoint = NewV2(0.5, 0.5);
     Viewport.BackgroundTransparency = 1;
+    
+    MouseUnlocker = Instance.new("TextButton", Parent);
+    MouseUnlocker.Size = UDim2.new(1, 0, 1, 0);
+    MouseUnlocker.Position = UDim2.new(0.5, 0, 0.5, 0);
+    MouseUnlocker.AnchorPoint = NewV2(0.5, 0.5);
+    MouseUnlocker.Text = "";
+    MouseUnlocker.BorderSizePixel = 0;
+    MouseUnlocker.Visible = false;
+
     Parent.Enabled = true;
     Parent.Parent = CoreGui;
 end;
@@ -992,11 +1045,6 @@ function DendroESP:AddModel(Model, Mode)
     RenderingTable.RenderDescendants = (Mode == "Vertex" or Mode == "Outline");
     return RenderingTable;
 end;
-function DendroESP:AddModelFolder(Folder, Mode)
-    assert(self == DendroESP, "Expected a self call (:) instead of (.)");
-    assert(typeof(Folder) == "Instance", "Expected an Instance for argument #1.");
-
-end;
 
 function DendroESP:AddCharacter(Character, Mode)
     assert(self == DendroESP, "Expected a self call (:) instead of (.)");
@@ -1032,12 +1080,12 @@ end;
 if (_G.DendroESPConnection) then _G.DendroESPConnection:Disconnect(); end;
 if (CoreGui:FindFirstChild("DendroESP")) then CoreGui.DendroESP:Destroy(); end;
 SetupViewport();
-
+DendroESP.MousePos = GetMousePos();
 _G.DendroESPConnection = RunService.RenderStepped:Connect(function()
     NonNegativeTables = {};
     Camera = Workspace.CurrentCamera;
     BulletSource = GetBulletSource();
-    DendroESP.MousePos = GetMousePos();
+    
     if (Viewport) then Viewport.CurrentCamera = Camera; end;
     for _, RenderingTable in pairs(RenderingTables) do
         RenderingTable:Render();
@@ -1049,6 +1097,28 @@ _G.DendroESPConnection = RunService.RenderStepped:Connect(function()
         end;
         Drawings.Count = 0;
     end;
+end);
+--#endregion
+
+--#region Aimbot
+if (_G.DendroAimbotConnection) then _G.DendroAimbotConnection:Disconnect(); end;
+_G.DendroAimbotConnection = RunService.RenderStepped:Connect(function()
+    local MousePos = GetMousePos();
+    local AimTarget = DendroESP.AimTarget;
+    DendroESP.MousePos = MousePos;
+    if (not AimTarget) then return; end;
+    local AimFactor = DendroESP.AimFactor;
+    local Delta = AimTarget - MousePos;
+    local Distance = Delta.Magnitude;
+    Delta = Delta.Unit;
+    if (Distance <= 10) then
+        Delta = Delta * AimFactor * 0.5 * Distance;
+    elseif (Distance <= 2) then
+        return;
+    else
+        Delta = Delta * Distance * AimFactor;
+    end;
+    mousemoverel(Delta.X, Delta.Y);
 end);
 --#endregion
 
