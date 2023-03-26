@@ -1081,10 +1081,12 @@ end;
 --#endregion
 
 --#region Rendering
+if (_G.DendroESP) then _G.DendroESP:ClearESP(); end;
 if (_G.DendroESPConnection) then _G.DendroESPConnection:Disconnect(); end;
 if (CoreGui:FindFirstChild("DendroESP")) then CoreGui.DendroESP:Destroy(); end;
 SetupViewport();
 DendroESP.MousePos = GetMousePos();
+_G.DendroESP = DendroESP;
 _G.DendroESPConnection = RunService.RenderStepped:Connect(function()
     NonNegativeTables = {};
     Camera = Workspace.CurrentCamera;
