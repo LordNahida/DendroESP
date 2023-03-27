@@ -34,6 +34,7 @@ local NonNegativeTables;
 --//Main\\--
 local DendroESP = {
     AimbotEnabled = false;
+    AimSensetivity = 4;
     PostRender = PostRender.Event;
 
     BulletOffset = NewCF(0, 0, -1);
@@ -479,6 +480,19 @@ local function DrawText(self)
     return TextDrawing;
 end;
 
+local function DrawTracer(self)
+    if (not self.TracerEnabled) then return; end;
+    if (not self.NegativeTrace and self.CurrentState == "Negative") then return; end;
+    local P0 = DendroESP.TracerSource;
+    local P1 = NewV2(self.Center2D.X, self.Max2DPoint.Y);
+    local Line = CreateDrawing("Line");
+    Line.From, Line.To = P0, P1;
+    Line.Color = self.CurrentColor;
+    Line.Transparency = self.Opacity;
+    Line.Thickness = self.Thickness;
+    Line.Visible = true;
+end;
+
 local function DrawHealth(self)
     if (not self.HealthEnabled) then return; end;
     local Humanoid = self.Instance:FindFirstChildOfClass("Humanoid");
@@ -595,13 +609,13 @@ local function PreparePart(self)
     self.CrosshairCenter2D, self.CrosshairOnScreen = ToScreenPoint(Camera, self.CrosshairCenter3D);
     self.CrosshairCenter2D = V3ToV2(self.CrosshairCenter2D);
     if (not self.RenderState) then
-        self.RenderState = "Positive";
+        self.CurrentState = "Positive";
         self.CurrentColor = self.PositiveColor;
         return true;
     end;
 
     local RenderState = WallPenRaycast(BulletSource, Part.Position, Part);
-    self.RenderState = RenderState;
+    self.CurrentState = RenderState;
     self.CurrentColor = self[RenderState.."Color"];
     if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = (OnScreen and self) or nil; end;
     return true;
@@ -638,13 +652,13 @@ local function PrepareModel(self)
     self.CrosshairCenter2D, self.CrosshairOnScreen = ToScreenPoint(Camera, self.CrosshairCenter3D);
     self.CrosshairCenter2D = V3ToV2(self.CrosshairCenter2D);
     if (not self.RenderState) then
-        self.RenderState = "Positive";
+        self.CurrentState = "Positive";
         self.CurrentColor = self.PositiveColor;
         return true;
     end;
 
     local RenderState = WallPenRaycast(BulletSource, ModelCF.Position, Model);
-    self.RenderState = RenderState;
+    self.CurrentState = RenderState;
     self.CurrentColor = self[RenderState.."Color"];
     if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = (OnScreen and self) or nil; end;
     return true;
@@ -682,13 +696,13 @@ local function PrepareCharacter(self)
     self.CrosshairCenter2D, self.CrosshairOnScreen = ToScreenPoint(Camera, self.CrosshairCenter3D);
     self.CrosshairCenter2D = V3ToV2(self.CrosshairCenter2D);
     if (not self.RenderState) then
-        self.State = "Positive";
+        self.CurrentState = "Positive";
         self.CurrentColor = self.PositiveColor;
         return true;
     end;
 
     local RenderState = WallPenRaycast(BulletSource, CharacterCF.Position, Character);
-    self.State = RenderState;
+    self.CurrentState = RenderState;
     self.CurrentColor = self[RenderState.."Color"];
     if (RenderState ~= "Negative") then NonNegativeTables[#NonNegativeTables+1] = (OnScreen and self) or nil; end;
     return true;
@@ -710,6 +724,7 @@ local function Render(self)
     if (not self.Enabled) then return; end;
     if (not self.Instance or not self.Instance.Parent) then self:Destroy(); end;
     self:Prepare();
+    DrawTracer(self);
     if (not self.OnScreen and self.Type ~= "Orthogonal") then return; end;
     if (self.RenderBoundingBox) then ESPs.BoundingBox.Render(self); end;
     self:MRender();
@@ -767,6 +782,9 @@ local function CreateRenderingTable(Instance, Type)
         Font = Drawing.Fonts.Monospace;
         TextPadding = NewV2(0, 6);
         TextEnabled = false;
+
+        TracerEnabled = false;
+        NegativeTrace = false;
 
         Health = 0;
         MaxHealth = 100;
@@ -1088,7 +1106,6 @@ end;
 function DendroESP:ClearESP()
     for _ = 1, #RenderingTables do
         RenderingTables[_]:Destroy();
-        RenderingTables[_] = nil;
     end;
 end;
 --#endregion
@@ -1107,6 +1124,7 @@ _G.DendroESPConnection = RunService.RenderStepped:Connect(function()
     NonNegativeTables = {};
     Camera = Workspace.CurrentCamera;
     BulletSource = GetBulletSource();
+    DendroESP.TracerSource = NewV2(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y);
     --//Rendering\\--
     if (Viewport) then Viewport.CurrentCamera = Camera; end;
     for _, RenderingTable in pairs(RenderingTables) do
@@ -1127,10 +1145,10 @@ _G.DendroESPConnection = RunService.RenderStepped:Connect(function()
     if (not AimTarget) then return; end;
     local Delta = AimTarget - MousePos;
     local Distance = Delta.Magnitude;
-    local Sensitivity = DendroESP:GetMouseSensitivity() * 4;
+    local Sensitivity = DendroESP:GetMouseSensitivity() * DendroESP.AimSensetivity;
     Delta = Delta.Unit;
     if (Distance <= 10) then
-        Delta = Delta / Sensitivity * 0.5 * Distance;
+        Delta = Delta / Sensitivity * 0.25 * Distance;
     elseif (Distance <= 2) then
         return;
     else
